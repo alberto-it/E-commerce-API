@@ -8,7 +8,7 @@ from typing import List
 import datetime
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+mysqlconnector://root:passW11!@localhost/e_commerce_db2"
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+mysqlconnector://root:!@localhost/e_commerce_db2"
 
 class Base(DeclarativeBase): pass # kinda like... |Base = DeclarativeBase|
 
