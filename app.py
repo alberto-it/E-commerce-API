@@ -6,9 +6,12 @@ from flask_marshmallow import Marshmallow
 from marshmallow import fields, ValidationError
 from typing import List
 import datetime
+from flask_cors import CORS
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+mysqlconnector://root:!@localhost/e_commerce_db2"
+CORS(app)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+mysqlconnector://root:passW11!@localhost/e_commerce_db2"
 
 class Base(DeclarativeBase): pass # kinda like... |Base = DeclarativeBase|
 
@@ -163,25 +166,43 @@ def get_order_details():
         order_details.append(order_data)
     return jsonify(order_details)
 
+
 @app.route('/orders', methods=["POST"])
 def add_order():
-    try: 
-        data = request.json
-        if not data or "product_id" not in data or "customer_id" not in data:
+    try:
+        data = request.get_json()
+
+        if not data or "product_ids" not in data or "customer_id" not in data:
             raise ValidationError({"Error": "Missing Required Fields in Request"})
 
-        product = db.session.query(Product).filter_by(id=data["product_id"]).first()
         customer = db.session.query(Customer).filter_by(id=data["customer_id"]).first()
-
-        if not product or not customer: 
-            raise ValidationError({"Error": "Invalid Product or Customer ID"})
+        if not customer:
+            raise ValidationError({"Error": "Invalid Customer ID"})
 
         new_order = Order(date=datetime.date.today(), customer=customer)
-        new_order.products.append(product)  
+
+        product_ids = data.get("product_ids")
+        if not product_ids:
+            raise ValidationError({"Error": "Missing product_ids list"})
+
+        products = db.session.query(Product).filter(Product.id.in_(product_ids)).all()
+
+        missing_product_ids = set(product_ids) - {product.id for product in products}
+        if missing_product_ids:
+            raise ValidationError({
+                "Error": "Invalid Product IDs",
+                "Missing": list(missing_product_ids)
+            })
+
+        new_order.products.extend(products)
+
         db.session.add(new_order)
         db.session.commit()
         return jsonify({"Message": "Order Created Successfully!"}), 201
-    except ValidationError as err: return jsonify(err.messages), 400
+    
+    except ValidationError as err:
+        return jsonify(err.messages), 400
+
 
 @app.route("/orders/<int:order_id>", methods=["GET"])
 def get_order_details_by_order_id(order_id):
