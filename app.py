@@ -144,6 +144,12 @@ def get_customers_by_id(id):
     if customer: return customer_schema.jsonify(customer)
     return jsonify({"Message":f"Customer ID {id} Not Found!"}) 
 
+@app.route('/products/<int:id>', methods=["GET"])   # Add May 11, 2024
+def get_product_by_id(id):
+    product = db.session.execute(select(Product).where(Product.id==id)).scalar()
+    if product: return product_schema.jsonify(product)
+    return jsonify({"Message":f"Product ID {id} Not Found!"}) 
+
 @app.route("/orders", methods=["GET"])
 def get_order_details():
     order_details = []
